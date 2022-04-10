@@ -14,32 +14,23 @@ struct ContentView: View {
     
     var body: some View {
         VStack {
+//            ProgressView(value: /*@START_MENU_TOKEN@*/0.5/*@END_MENU_TOKEN@*/).progressViewStyle(CircularProgressViewStyle())
             myWebView
                 .frame(width: 400.0, height: 500.0)
             
             TextField(
-                "Placeholder", text: $bookUrl
+                "Please input the book url", text: $bookUrl
             )
-            Button(/*@START_MENU_TOKEN@*/"Button"/*@END_MENU_TOKEN@*/) {
-                print("Hello world")
-                myWebView.runJavascript()
+            Button("Get web as string") {
+                //myWebView.runJavascript("document.body.style.backgroundColor = 'red'")
+                let javascriptString = "(function() {body = document.body;sel = window.getSelection();range = document.createRange();range.selectNodeContents(body);sel.removeAllRanges();sel.addRange(range);selString = sel.toString();return selString;})();"
+                let webText = myWebView.runJavascriptGetReturn(javascriptString)
+                print("Below are webText\n")
+                print(webText)
+                
+
             }
             .frame(width: /*@START_MENU_TOKEN@*/100.0/*@END_MENU_TOKEN@*/, height: /*@START_MENU_TOKEN@*/100.0/*@END_MENU_TOKEN@*/)
-            .onSubmit {
-                //bookUrl
-                
-                /*
-                 https://stackoverflow.com/questions/24016142/how-do-i-make-an-http-request-in-swift
-                let url = URL(string: "https://www.stackoverflow.com")!
-
-                let task = URLSession.shared.dataTask(with: url) {(data, response, error) in
-                    guard let data = data else { return }
-                    print(String(data: data, encoding: .utf8)!)
-                }
-
-                task.resume()
-                 */
-            }
         }
     }
 }
@@ -49,12 +40,6 @@ struct WebView: UIViewRepresentable {
     var wkWebView: WKWebView = WKWebView(frame: .zero)
 
     func makeUIView(context: Context) -> WKWebView {
-//        let webConfiguration = WKWebViewConfiguration()
-//        let wkcontentController = WKUserContentController()
-//
-//        webConfiguration.userContentController = wkcontentController
-//        let webView = WKWebView(frame: .zero, configuration: webConfiguration)
-//        wkWebView = WKWebView(frame: .zero, configuration: webConfiguration)
         return wkWebView
     }
     func updateUIView(_ uiView: UIViewType, context: Context) {
@@ -62,11 +47,33 @@ struct WebView: UIViewRepresentable {
         uiView.load(request)
     }
     
-    func runJavascript() {
-        wkWebView.evaluateJavaScript("document.body.style.backgroundColor = 'red'", completionHandler: nil)
-        print("javascript ran")
+    func runJavascript(_ jsString: String) {
+        wkWebView.evaluateJavaScript(jsString, completionHandler: nil)
     }
     
+    func runJavascriptGetReturn(_ jsString: String) -> NSString{
+        var webText: NSString = ""
+        var finished = false
+        wkWebView.evaluateJavaScript(jsString) { (result, error) in
+            if let result = result {
+                webText = result as! NSString
+            }else {
+                webText = "ERROR"
+            }
+            finished = true
+        }
+        while !finished {
+            RunLoop.current.run(mode: RunLoop.Mode.default, before: Date.distantFuture)
+        }
+        return webText
+    }
+    
+    func loadURL(_ funURL: String){
+        let myURL = URL(string:funURL)
+        let myRequest = URLRequest(url: myURL!)
+        let loadStatus = wkWebView.load(myRequest)
+        print(loadStatus ?? "default load status")
+    }
 
 }
 
